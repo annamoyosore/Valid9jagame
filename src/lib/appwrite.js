@@ -23,6 +23,6 @@ export const USERS_COLLECTION_ID = "users";
 export const TX_COLLECTION_ID = "transactions";
 
 // (future)
-// export const GAMES_COLLECTION_ID = "...";
+// export const GAMES_COLLECTION_ID = "games";
 
 export default client;
