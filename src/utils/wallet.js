@@ -15,7 +15,7 @@ export async function createWallet(user) {
     {
       userId: user.$id,
       email: user.email,
-      balance: 100, // 🎁 starter coins
+      balance: 10, // 🎁 starter coins
       locked: 0
     }
   );
