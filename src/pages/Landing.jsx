@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { account, ID } from "../lib/appwrite";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Landing() {
   const [showLogin, setShowLogin] = useState(false);
@@ -8,15 +10,31 @@ export default function Landing() {
   const [loading, setLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
 
+  const { user, getUser } = useAuth();
+  const navigate = useNavigate();
+
+  // =========================
+  // 🔁 REFRESH AUTH ON LOAD
+  // =========================
+  useEffect(() => {
+    getUser();
+  }, []);
+
+  // =========================
+  // 🚀 AUTO REDIRECT IF LOGGED IN
+  // =========================
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user]);
+
   // =========================
   // 🎮 START BUTTON
   // =========================
   function handleStart() {
-    console.log("Start Playing clicked");
-
     setStartLoading(true);
 
-    // simulate slight delay for smooth UX
     setTimeout(() => {
       setShowLogin(true);
       setStartLoading(false);
@@ -93,7 +111,7 @@ export default function Landing() {
             cursor: startLoading ? "not-allowed" : "pointer"
           }}
         >
-          {startLoading ? "Loading..." : "Start Playing"}
+          {startLoading ? "Opening..." : "Start Playing"}
         </button>
       )}
 
