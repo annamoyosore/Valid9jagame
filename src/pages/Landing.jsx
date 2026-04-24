@@ -1,20 +1,26 @@
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { account } from "../lib/appwrite";
 
 export default function Landing() {
-  const navigate = useNavigate();
+  const [showLogin, setShowLogin] = useState(false);
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
 
-  function handleStart() {
-    console.log("Start button clicked");
+  async function handleLogin() {
+    if (!email) return setMessage("❌ Enter email");
 
-    // ✅ Try SPA navigation first
-    navigate("/login", { replace: true });
+    try {
+      await account.createMagicURLToken(
+        "unique()",
+        email,
+        window.location.origin + "/dashboard"
+      );
 
-    // 🔁 Fallback (in case React Router fails)
-    setTimeout(() => {
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
-      }
-    }, 200);
+      setMessage("✅ Check your email for login link");
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ Failed to send email");
+    }
   }
 
   return (
@@ -39,22 +45,65 @@ export default function Landing() {
         Play • Compete • Win Coins 🪙
       </p>
 
-      <button
-        onClick={handleStart}
-        style={{
-          marginTop: 30,
-          padding: "14px 28px",
-          background: "#22c55e",
-          color: "#000",
-          border: "none",
-          borderRadius: 8,
-          fontSize: "1rem",
-          fontWeight: "bold",
-          cursor: "pointer"
-        }}
-      >
-        Start Playing
-      </button>
+      {/* =========================
+          🔘 START BUTTON
+      ========================= */}
+      {!showLogin && (
+        <button
+          onClick={() => setShowLogin(true)}
+          style={{
+            marginTop: 30,
+            padding: "12px 24px",
+            background: "#22c55e",
+            color: "#000",
+            borderRadius: 8,
+            border: "none",
+            fontWeight: "bold",
+            cursor: "pointer"
+          }}
+        >
+          Start Playing
+        </button>
+      )}
+
+      {/* =========================
+          🔐 LOGIN FORM (INLINE)
+      ========================= */}
+      {showLogin && (
+        <div style={{ marginTop: 30 }}>
+          <h2>Continue with Email</h2>
+
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              padding: 10,
+              width: 250,
+              borderRadius: 6,
+              border: "none"
+            }}
+          />
+
+          <br /><br />
+
+          <button
+            onClick={handleLogin}
+            style={{
+              padding: 10,
+              borderRadius: 6,
+              border: "none",
+              background: "#22c55e",
+              cursor: "pointer"
+            }}
+          >
+            Send Login Link
+          </button>
+
+          <p style={{ marginTop: 10 }}>{message}</p>
+        </div>
+      )}
     </div>
   );
 }
