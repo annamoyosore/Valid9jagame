@@ -16,7 +16,7 @@ export default function Landing() {
       }}
     >
       <h1 style={{ fontSize: "3rem", marginBottom: 10 }}>
-        🎮 WHOT Multiplayer
+        🎮 WHOT Multiplayer game
       </h1>
 
       <p style={{ fontSize: "1.2rem", opacity: 0.8 }}>
