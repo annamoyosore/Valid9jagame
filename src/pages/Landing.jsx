@@ -1,28 +1,50 @@
 import { useState } from "react";
-import { account } from "../lib/appwrite";
+import { account, ID } from "../lib/appwrite";
 
 export default function Landing() {
   const [showLogin, setShowLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // =========================
+  // 🔐 HANDLE LOGIN
+  // =========================
   async function handleLogin() {
-    if (!email) return setMessage("❌ Enter email");
+    if (!email) {
+      return setMessage("❌ Enter email");
+    }
+
+    setLoading(true);
+    setMessage("");
 
     try {
       await account.createMagicURLToken(
-        "unique()",
+        ID.unique(), // ✅ FIXED
         email,
         window.location.origin + "/dashboard"
       );
 
       setMessage("✅ Check your email for login link");
     } catch (err) {
-      console.error(err);
+      console.error("Login error:", err);
       setMessage("❌ Failed to send email");
+    } finally {
+      setLoading(false);
     }
   }
 
+  // =========================
+  // 🎮 START BUTTON
+  // =========================
+  function handleStart() {
+    console.log("Start Playing clicked"); // ✅ DEBUG
+    setShowLogin(true);
+  }
+
+  // =========================
+  // 🎨 UI
+  // =========================
   return (
     <div
       style={{
@@ -50,7 +72,7 @@ export default function Landing() {
       ========================= */}
       {!showLogin && (
         <button
-          onClick={() => setShowLogin(true)}
+          onClick={handleStart}
           style={{
             marginTop: 30,
             padding: "12px 24px",
@@ -67,7 +89,7 @@ export default function Landing() {
       )}
 
       {/* =========================
-          🔐 LOGIN FORM (INLINE)
+          🔐 LOGIN FORM
       ========================= */}
       {showLogin && (
         <div style={{ marginTop: 30 }}>
@@ -90,18 +112,34 @@ export default function Landing() {
 
           <button
             onClick={handleLogin}
+            disabled={loading}
             style={{
               padding: 10,
               borderRadius: 6,
               border: "none",
-              background: "#22c55e",
-              cursor: "pointer"
+              background: loading ? "#999" : "#22c55e",
+              cursor: loading ? "not-allowed" : "pointer"
             }}
           >
-            Send Login Link
+            {loading ? "Sending..." : "Send Login Link"}
           </button>
 
           <p style={{ marginTop: 10 }}>{message}</p>
+
+          {/* 🔙 BACK BUTTON */}
+          <button
+            onClick={() => setShowLogin(false)}
+            style={{
+              marginTop: 10,
+              padding: 6,
+              background: "transparent",
+              border: "none",
+              color: "#ccc",
+              cursor: "pointer"
+            }}
+          >
+            ← Back
+          </button>
         </div>
       )}
     </div>
