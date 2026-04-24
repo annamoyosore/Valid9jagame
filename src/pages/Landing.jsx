@@ -1,6 +1,19 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export default function Landing() {
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  function handleStart() {
+    setLoading(true);
+
+    // small delay for UX feel
+    setTimeout(() => {
+      navigate("/login"); // ✅ correct lowercase route
+    }, 700);
+  }
+
   return (
     <div
       style={{
@@ -25,21 +38,29 @@ export default function Landing() {
 
       <div style={{ marginTop: 30, display: "flex", gap: 10 }}>
         
-        {/* ✅ USE LINK INSTEAD OF <a> */}
-        <Link
-          to="/Login"
-          style={{
-            padding: "12px 24px",
-            background: "#22c55e",
-            color: "#000",
-            borderRadius: 8,
-            textDecoration: "none",
-            fontWeight: "bold"
-          }}
-        >
-          Start Playing
-        </Link>
+        {/* ✅ START BUTTON WITH LOADING */}
+        {loading ? (
+          <div style={{ fontSize: "1.1rem" }}>
+            ⏳ Loading...
+          </div>
+        ) : (
+          <button
+            onClick={handleStart}
+            style={{
+              padding: "12px 24px",
+              background: "#22c55e",
+              color: "#000",
+              borderRadius: 8,
+              border: "none",
+              fontWeight: "bold",
+              cursor: "pointer"
+            }}
+          >
+            Start Playing
+          </button>
+        )}
 
+        {/* ✅ DASHBOARD LINK */}
         <Link
           to="/dashboard"
           style={{
@@ -47,7 +68,8 @@ export default function Landing() {
             border: "1px solid #fff",
             borderRadius: 8,
             textDecoration: "none",
-            color: "#fff"
+            color: "#fff",
+            display: "inline-block"
           }}
         >
           Dashboard
