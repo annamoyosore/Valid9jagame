@@ -9,6 +9,22 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { getWallet, rewardWinner } from "../utils/wallet";
 
+const SHAPES = ["circle", "triangle", "square", "star", "cross"];
+
+function generateDeck() {
+  const deck = [];
+
+  for (const shape of SHAPES) {
+    for (let i = 1; i <= 13; i++) {
+      if (i === 6 || i === 9) continue;
+      deck.push({ shape, number: i });
+    }
+    deck.push({ shape, number: 14 });
+  }
+
+  return deck.sort(() => Math.random() - 0.5);
+}
+
 export default function Game() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -16,9 +32,6 @@ export default function Game() {
   const [game, setGame] = useState(null);
   const [message, setMessage] = useState("");
 
-  // =========================
-  // 🔄 LOAD + REALTIME
-  // =========================
   useEffect(() => {
     loadGame();
 
@@ -43,7 +56,7 @@ export default function Game() {
   const topCard = state.discard?.at(-1);
 
   // =========================
-  // 🔒 SAFE DRAW (SYNC PROTECTED)
+  // 🔒 SAFE DRAW
   // =========================
   function safeDraw(newState) {
     if (newState.deck.length === 0) {
@@ -61,12 +74,11 @@ export default function Game() {
   // 🎯 VALIDATION
   // =========================
   function isValidMove(card, topCard) {
-    if (!topCard) return { valid: true };
-
-    if (card.number === topCard.number) return { valid: true };
-    if (card.shape === topCard.shape) return { valid: true };
-
-    return { valid: false, reason: "Match number or shape" };
+    if (!topCard) return true;
+    return (
+      card.number === topCard.number ||
+      card.shape === topCard.shape
+    );
   }
 
   function hasValidMove(hand, topCard) {
@@ -79,163 +91,167 @@ export default function Game() {
   // 🎮 PLAY CARD
   // =========================
   async function playCard(index) {
-    if (game.finished) {
-      return setMessage("Game already finished");
-    }
+    if (game.finished) return setMessage("Game finished");
+    if (state.turn !== user.$id) return setMessage("⛔ Not your turn");
 
-    if (state.turn !== user.$id) {
-      return setMessage("⛔ Not your turn");
-    }
-
-    // 🔒 SYNC CHECK (ANTI-OVERWRITE)
-    const fresh = await databases.getDocument(
-      DB_ID,
-      GAMES_COLLECTION_ID,
-      id
-    );
-
+    const fresh = await databases.getDocument(DB_ID, GAMES_COLLECTION_ID, id);
     if (fresh.lastMove !== game.lastMove) {
-      return setMessage("⚠️ Game updated, retry move");
+      return setMessage("⚠️ Sync issue, retry");
     }
 
     const newState = JSON.parse(JSON.stringify(state));
     const card = newState.players[user.$id][index];
 
-    const check = isValidMove(card, topCard);
-
-    if (!check.valid) {
-      return setMessage(`❌ ${check.reason}`);
+    if (!isValidMove(card, topCard)) {
+      return setMessage("❌ Invalid move");
     }
 
-    // play card
     newState.players[user.$id].splice(index, 1);
     newState.discard.push(card);
 
-    // =========================
-    // 🧠 WHOT RULES
-    // =========================
+    // WHOT RULES
     if (card.number === 2) {
       newState.players[opponent].push(safeDraw(newState));
       newState.players[opponent].push(safeDraw(newState));
       newState.turn = user.$id;
-      setMessage("🔴 Pick 2!");
-    }
-
-    else if (card.number === 8) {
+    } else if (card.number === 8) {
       newState.turn = user.$id;
-      setMessage("🔵 Suspend!");
-    }
-
-    else if (card.number === 14) {
+    } else if (card.number === 14) {
       newState.players[opponent].push(safeDraw(newState));
       newState.turn = user.$id;
-      setMessage("🟢 General Market!");
-    }
-
-    else if (card.number === 1) {
+    } else if (card.number === 1) {
       newState.turn = user.$id;
-      setMessage("🟡 Play again!");
-    }
-
-    else {
+    } else {
       newState.turn = opponent;
-      setMessage("");
     }
 
     await checkWinner(newState);
 
-    await databases.updateDocument(
-      DB_ID,
-      GAMES_COLLECTION_ID,
-      id,
-      {
-        state: JSON.stringify(newState),
-        lastMove: Date.now().toString()
-      }
-    );
+    await databases.updateDocument(DB_ID, GAMES_COLLECTION_ID, id, {
+      state: JSON.stringify(newState),
+      lastMove: Date.now().toString()
+    });
   }
 
   // =========================
-  // 🃏 DRAW CARD
+  // 🃏 DRAW
   // =========================
   async function drawCard() {
-    if (game.finished) {
-      return setMessage("Game already finished");
-    }
-
-    if (state.turn !== user.$id) {
-      return setMessage("⛔ Not your turn");
-    }
-
-    // 🔒 SYNC CHECK
-    const fresh = await databases.getDocument(
-      DB_ID,
-      GAMES_COLLECTION_ID,
-      id
-    );
-
-    if (fresh.lastMove !== game.lastMove) {
-      return setMessage("⚠️ Game updated, retry");
-    }
+    if (state.turn !== user.$id) return;
 
     const newState = JSON.parse(JSON.stringify(state));
+    const card = safeDraw(newState);
 
-    const drawn = safeDraw(newState);
-
-    if (!drawn) {
-      return setMessage("No cards left");
-    }
-
-    newState.players[user.$id].push(drawn);
+    newState.players[user.$id].push(card);
     newState.turn = opponent;
 
-    setMessage("🃏 You drew a card");
-
-    await databases.updateDocument(
-      DB_ID,
-      GAMES_COLLECTION_ID,
-      id,
-      {
-        state: JSON.stringify(newState),
-        lastMove: Date.now().toString()
-      }
-    );
+    await databases.updateDocument(DB_ID, GAMES_COLLECTION_ID, id, {
+      state: JSON.stringify(newState),
+      lastMove: Date.now().toString()
+    });
   }
 
   // =========================
-  // 🏆 WIN CHECK
+  // 🏆 ROUND SYSTEM
   // =========================
   async function checkWinner(newState) {
+    let roundWinner = null;
+
     if (newState.players[user.$id].length === 0) {
-      await finishGame(user.$id);
+      roundWinner = user.$id;
     }
 
     if (newState.players[opponent].length === 0) {
-      await finishGame(opponent);
+      roundWinner = opponent;
     }
+
+    if (!roundWinner) return;
+
+    const scores = game.scores || {};
+    scores[roundWinner] = (scores[roundWinner] || 0) + 1;
+
+    const nextRound = (game.round || 1) + 1;
+
+    if (nextRound > 3) {
+      const finalWinner =
+        (scores[user.$id] || 0) > (scores[opponent] || 0)
+          ? user.$id
+          : opponent;
+
+      await finishGame(finalWinner);
+      return;
+    }
+
+    const deck = generateDeck();
+
+    const newStateRound = {
+      players: {
+        [user.$id]: deck.splice(0, 6),
+        [opponent]: deck.splice(0, 6)
+      },
+      deck,
+      discard: [deck.pop()],
+      turn: roundWinner
+    };
+
+    await databases.updateDocument(DB_ID, GAMES_COLLECTION_ID, id, {
+      state: JSON.stringify(newStateRound),
+      round: nextRound,
+      scores,
+      lastMove: Date.now().toString()
+    });
+
+    setMessage("🏆 Round finished");
   }
 
   // =========================
-  // 💰 PAYOUT
+  // 💰 FINAL PAYOUT
   // =========================
   async function finishGame(winnerId) {
     const pot = game.pot || 0;
-
     const fee = Math.floor(pot * 0.1);
     const reward = pot - fee;
 
     const wallet = await getWallet(winnerId);
     await rewardWinner(wallet, reward);
 
-    await databases.updateDocument(
-      DB_ID,
-      GAMES_COLLECTION_ID,
-      id,
-      {
-        finished: true,
-        winner: winnerId
-      }
-    );
+    await databases.updateDocument(DB_ID, GAMES_COLLECTION_ID, id, {
+      finished: true,
+      winner: winnerId
+    });
+  }
+
+  // =========================
+  // 🚪 QUIT SYSTEM
+  // =========================
+  async function quitGame() {
+    const me = user.$id;
+    const pot = game.pot || 0;
+    const round = game.round || 1;
+
+    const myStake = pot / 2;
+
+    let refund = 0;
+
+    if (round === 1) refund = myStake;
+    else if (round === 2) refund = myStake * 0.5;
+    else refund = 0;
+
+    if (refund > 0) {
+      const wallet = await getWallet(me);
+      await rewardWinner(wallet, refund);
+    }
+
+    const opponentWallet = await getWallet(opponent);
+    await rewardWinner(opponentWallet, pot - refund);
+
+    await databases.updateDocument(DB_ID, GAMES_COLLECTION_ID, id, {
+      finished: true,
+      winner: opponent,
+      quitBy: me
+    });
+
+    setMessage("🚪 You quit");
   }
 
   // =========================
@@ -246,79 +262,47 @@ export default function Game() {
       <h2>🎮 Multiplayer WHOT</h2>
 
       <p>
-        {state.turn === user.$id
-          ? "🟢 Your Turn"
-          : "🔴 Opponent Turn"}
+        {state.turn === user.$id ? "🟢 Your Turn" : "🔴 Opponent"}
       </p>
 
-      <div style={{ marginBottom: 10 }}>
-        <strong>Round:</strong> {game.round || 1} / 3 |{" "}
-        <strong>Pot:</strong> {game.pot || 0} 🪙
-      </div>
+      <p>
+        Round: {game.round || 1}/3 | Pot: {game.pot || 0} 🪙
+      </p>
 
-      {message && (
-        <div style={{ color: "yellow", marginBottom: 10 }}>
-          {message}
-        </div>
-      )}
+      <p>
+        You: {game.scores?.[user.$id] || 0} | Opponent:{" "}
+        {game.scores?.[opponent] || 0}
+      </p>
+
+      {message && <p style={{ color: "yellow" }}>{message}</p>}
+
+      {game.quitBy && <p>⚠️ Player quit</p>}
 
       <hr />
 
-      <div>
-        <h3>Top Card</h3>
-        {topCard && (
-          <p>
-            {topCard.shape} - {topCard.number}
-          </p>
-        )}
-      </div>
+      <h3>Top Card</h3>
+      <p>
+        {topCard?.shape} {topCard?.number}
+      </p>
 
-      <button
-        onClick={drawCard}
-        disabled={state.turn !== user.$id}
-        style={{
-          marginTop: 10,
-          padding: 10,
-          background: "gold",
-          border: "none",
-          borderRadius: 6
-        }}
-      >
-        🃏 Draw Card
+      <button onClick={drawCard}>Draw</button>
+      <button onClick={quitGame} style={{ marginLeft: 10 }}>
+        Quit
       </button>
 
       {!hasValidMove(myHand, topCard) && (
-        <p style={{ color: "orange" }}>
-          ⚠️ No valid move — draw a card
-        </p>
+        <p>⚠️ No valid move</p>
       )}
 
       <hr />
 
-      <div>
-        <h3>Your Cards</h3>
+      <h3>Your Cards</h3>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {myHand.map((c, i) => (
-            <button
-              key={i}
-              onClick={() => playCard(i)}
-              disabled={state.turn !== user.$id}
-              style={{
-                padding: 10,
-                borderRadius: 6,
-                border: "1px solid #ccc",
-                background:
-                  state.turn === user.$id ? "#fff" : "#555",
-                color:
-                  state.turn === user.$id ? "#000" : "#ccc"
-              }}
-            >
-              {c.shape} {c.number}
-            </button>
-          ))}
-        </div>
-      </div>
+      {myHand.map((c, i) => (
+        <button key={i} onClick={() => playCard(i)}>
+          {c.shape} {c.number}
+        </button>
+      ))}
     </div>
   );
 }
