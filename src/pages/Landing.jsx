@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Landing() {
   return (
     <div
@@ -21,24 +23,25 @@ export default function Landing() {
         Play • Compete • Win Coins 🪙
       </p>
 
-      <div style={{ marginTop: 30 }}>
-        <a
-          href="/login"
+      <div style={{ marginTop: 30, display: "flex", gap: 10 }}>
+        
+        {/* ✅ USE LINK INSTEAD OF <a> */}
+        <Link
+          to="/login"
           style={{
             padding: "12px 24px",
             background: "#22c55e",
             color: "#000",
             borderRadius: 8,
             textDecoration: "none",
-            fontWeight: "bold",
-            marginRight: 10
+            fontWeight: "bold"
           }}
         >
           Start Playing
-        </a>
+        </Link>
 
-        <a
-          href="/dashboard"
+        <Link
+          to="/dashboard"
           style={{
             padding: "12px 24px",
             border: "1px solid #fff",
@@ -48,7 +51,7 @@ export default function Landing() {
           }}
         >
           Dashboard
-        </a>
+        </Link>
       </div>
     </div>
   );
