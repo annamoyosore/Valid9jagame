@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { account } from "../lib/appwrite";
+import { account, ID } from "../lib/appwrite";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -10,7 +10,7 @@ export default function Login() {
 
     try {
       await account.createMagicURLToken(
-        "unique()", // user id
+        ID.unique(), // ✅ FIXED
         email,
         window.location.origin + "/dashboard"
       );
