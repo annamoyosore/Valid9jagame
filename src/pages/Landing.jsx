@@ -10,18 +10,11 @@ export default function Landing() {
   const [loading, setLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
 
-  const { user, getUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // =========================
-  // 🔁 REFRESH AUTH ON LOAD
-  // =========================
-  useEffect(() => {
-    getUser();
-  }, []);
-
-  // =========================
-  // 🚀 AUTO REDIRECT IF LOGGED IN
+  // 🚀 REDIRECT IF LOGGED IN
   // =========================
   useEffect(() => {
     if (user) {
@@ -38,11 +31,11 @@ export default function Landing() {
     setTimeout(() => {
       setShowLogin(true);
       setStartLoading(false);
-    }, 500);
+    }, 300);
   }
 
   // =========================
-  // 🔐 HANDLE LOGIN
+  // 🔐 LOGIN
   // =========================
   async function handleLogin() {
     if (!email) {
@@ -61,16 +54,13 @@ export default function Landing() {
 
       setMessage("✅ Check your email for login link");
     } catch (err) {
-      console.error("Login error:", err);
+      console.error(err);
       setMessage("❌ Failed to send email");
     } finally {
       setLoading(false);
     }
   }
 
-  // =========================
-  // 🎨 UI
-  // =========================
   return (
     <div
       style={{
@@ -93,9 +83,7 @@ export default function Landing() {
         Play • Compete • Win Coins 🪙
       </p>
 
-      {/* =========================
-          🔘 START BUTTON
-      ========================= */}
+      {/* START BUTTON */}
       {!showLogin && (
         <button
           onClick={handleStart}
@@ -115,9 +103,7 @@ export default function Landing() {
         </button>
       )}
 
-      {/* =========================
-          🔐 LOGIN FORM
-      ========================= */}
+      {/* LOGIN FORM */}
       {showLogin && (
         <div style={{ marginTop: 30 }}>
           <h2>Continue with Email</h2>
@@ -153,7 +139,6 @@ export default function Landing() {
 
           <p style={{ marginTop: 10 }}>{message}</p>
 
-          {/* 🔙 BACK BUTTON */}
           <button
             onClick={() => setShowLogin(false)}
             style={{
