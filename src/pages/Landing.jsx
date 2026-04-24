@@ -3,6 +3,20 @@ import { useNavigate } from "react-router-dom";
 export default function Landing() {
   const navigate = useNavigate();
 
+  function handleStart() {
+    console.log("Start button clicked");
+
+    // ✅ Try SPA navigation first
+    navigate("/login", { replace: true });
+
+    // 🔁 Fallback (in case React Router fails)
+    setTimeout(() => {
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }, 200);
+  }
+
   return (
     <div
       style={{
@@ -18,48 +32,29 @@ export default function Landing() {
       }}
     >
       <h1 style={{ fontSize: "3rem", marginBottom: 10 }}>
-        🎮 WHOT Multiplayer game
+        🎮 WHOT Multiplayer Game
       </h1>
 
       <p style={{ fontSize: "1.2rem", opacity: 0.8 }}>
         Play • Compete • Win Coins 🪙
       </p>
 
-      <div style={{ marginTop: 30, display: "flex", gap: 10 }}>
-        
-        {/* ✅ FORCE NAVIGATION */}
-        <button
-          onClick={() => {
-            console.log("Start clicked");
-            navigate("/login");
-          }}
-          style={{
-            padding: "12px 24px",
-            background: "#22c55e",
-            color: "#000",
-            borderRadius: 8,
-            border: "none",
-            fontWeight: "bold",
-            cursor: "pointer"
-          }}
-        >
-          Start Playing
-        </button>
-
-        <button
-          onClick={() => navigate("/dashboard")}
-          style={{
-            padding: "12px 24px",
-            border: "1px solid #fff",
-            borderRadius: 8,
-            background: "transparent",
-            color: "#fff",
-            cursor: "pointer"
-          }}
-        >
-          Dashboard
-        </button>
-      </div>
+      <button
+        onClick={handleStart}
+        style={{
+          marginTop: 30,
+          padding: "14px 28px",
+          background: "#22c55e",
+          color: "#000",
+          border: "none",
+          borderRadius: 8,
+          fontSize: "1rem",
+          fontWeight: "bold",
+          cursor: "pointer"
+        }}
+      >
+        Start Playing
+      </button>
     </div>
   );
 }
