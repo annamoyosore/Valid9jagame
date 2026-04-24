@@ -12,24 +12,49 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <Routes>
+      {/* 🌐 PUBLIC ROUTES */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
 
-      <Route path="/dashboard" element={
-        <ProtectedRoute><Dashboard /></ProtectedRoute>
-      } />
+      {/* 🔐 PROTECTED ROUTES */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/wallet" element={
-        <ProtectedRoute><Wallet /></ProtectedRoute>
-      } />
+      <Route
+        path="/wallet"
+        element={
+          <ProtectedRoute>
+            <Wallet />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/game-room" element={
-        <ProtectedRoute><GameRoom /></ProtectedRoute>
-      } />
+      <Route
+        path="/game-room"
+        element={
+          <ProtectedRoute>
+            <GameRoom />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/game/:id" element={
-        <ProtectedRoute><Game /></ProtectedRoute>
-      } />
+      <Route
+        path="/game/:id"
+        element={
+          <ProtectedRoute>
+            <Game />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ❗ FALLBACK (VERY IMPORTANT FOR VERCEL) */}
+      <Route path="*" element={<Landing />} />
     </Routes>
   );
 }
