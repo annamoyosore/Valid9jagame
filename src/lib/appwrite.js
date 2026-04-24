@@ -1,4 +1,4 @@
-import { Client, Account, Databases, ID } from "appwrite";
+import { Client, Account, Databases, ID, Realtime } from "appwrite";
 
 const client = new Client();
 
@@ -12,8 +12,8 @@ export const account = new Account(client);
 // 🗄️ Database
 export const databases = new Databases(client);
 
-// ⚡ Realtime (for matchmaking + game sync)
-export const realtime = client;
+// ⚡ REALTIME (FIXED)
+export const realtime = new Realtime(client);
 
 // 🆔 ID generator
 export { ID };
@@ -21,7 +21,7 @@ export { ID };
 // 📌 CENTRAL CONFIG
 export const DB_ID = "6970a6be003068d274d1";
 
-// 📁 COLLECTIONS (based on your naming)
+// 📁 COLLECTIONS
 export const USERS_COLLECTION_ID = "users";
 export const TX_COLLECTION_ID = "transactions";
 export const GAMES_COLLECTION_ID = "games";
