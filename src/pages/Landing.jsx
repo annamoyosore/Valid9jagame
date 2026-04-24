@@ -6,6 +6,22 @@ export default function Landing() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [startLoading, setStartLoading] = useState(false);
+
+  // =========================
+  // 🎮 START BUTTON
+  // =========================
+  function handleStart() {
+    console.log("Start Playing clicked");
+
+    setStartLoading(true);
+
+    // simulate slight delay for smooth UX
+    setTimeout(() => {
+      setShowLogin(true);
+      setStartLoading(false);
+    }, 500);
+  }
 
   // =========================
   // 🔐 HANDLE LOGIN
@@ -20,7 +36,7 @@ export default function Landing() {
 
     try {
       await account.createMagicURLToken(
-        ID.unique(), // ✅ FIXED
+        ID.unique(),
         email,
         window.location.origin + "/dashboard"
       );
@@ -32,14 +48,6 @@ export default function Landing() {
     } finally {
       setLoading(false);
     }
-  }
-
-  // =========================
-  // 🎮 START BUTTON
-  // =========================
-  function handleStart() {
-    console.log("Start Playing clicked"); // ✅ DEBUG
-    setShowLogin(true);
   }
 
   // =========================
@@ -73,18 +81,19 @@ export default function Landing() {
       {!showLogin && (
         <button
           onClick={handleStart}
+          disabled={startLoading}
           style={{
             marginTop: 30,
             padding: "12px 24px",
-            background: "#22c55e",
+            background: startLoading ? "#999" : "#22c55e",
             color: "#000",
             borderRadius: 8,
             border: "none",
             fontWeight: "bold",
-            cursor: "pointer"
+            cursor: startLoading ? "not-allowed" : "pointer"
           }}
         >
-          Start Playing
+          {startLoading ? "Loading..." : "Start Playing"}
         </button>
       )}
 
