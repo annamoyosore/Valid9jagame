@@ -43,9 +43,9 @@ export default function Game() {
   const topCard = state.discard?.at(-1);
 
   // =========================
-  // ♻️ DECK RESHUFFLE
+  // 🔒 SAFE DRAW (SYNC PROTECTED)
   // =========================
-  function reshuffleDeck(newState) {
+  function safeDraw(newState) {
     if (newState.deck.length === 0) {
       const discard = [...newState.discard];
       const top = discard.pop();
@@ -53,6 +53,8 @@ export default function Game() {
       newState.deck = discard.sort(() => Math.random() - 0.5);
       newState.discard = [top];
     }
+
+    return newState.deck.pop();
   }
 
   // =========================
@@ -64,10 +66,7 @@ export default function Game() {
     if (card.number === topCard.number) return { valid: true };
     if (card.shape === topCard.shape) return { valid: true };
 
-    return {
-      valid: false,
-      reason: "Match number or shape"
-    };
+    return { valid: false, reason: "Match number or shape" };
   }
 
   function hasValidMove(hand, topCard) {
@@ -80,8 +79,23 @@ export default function Game() {
   // 🎮 PLAY CARD
   // =========================
   async function playCard(index) {
+    if (game.finished) {
+      return setMessage("Game already finished");
+    }
+
     if (state.turn !== user.$id) {
       return setMessage("⛔ Not your turn");
+    }
+
+    // 🔒 SYNC CHECK (ANTI-OVERWRITE)
+    const fresh = await databases.getDocument(
+      DB_ID,
+      GAMES_COLLECTION_ID,
+      id
+    );
+
+    if (fresh.lastMove !== game.lastMove) {
+      return setMessage("⚠️ Game updated, retry move");
     }
 
     const newState = JSON.parse(JSON.stringify(state));
@@ -93,18 +107,16 @@ export default function Game() {
       return setMessage(`❌ ${check.reason}`);
     }
 
+    // play card
     newState.players[user.$id].splice(index, 1);
     newState.discard.push(card);
-
-    reshuffleDeck(newState);
 
     // =========================
     // 🧠 WHOT RULES
     // =========================
     if (card.number === 2) {
-      reshuffleDeck(newState);
-      newState.players[opponent].push(newState.deck.pop());
-      newState.players[opponent].push(newState.deck.pop());
+      newState.players[opponent].push(safeDraw(newState));
+      newState.players[opponent].push(safeDraw(newState));
       newState.turn = user.$id;
       setMessage("🔴 Pick 2!");
     }
@@ -115,8 +127,7 @@ export default function Game() {
     }
 
     else if (card.number === 14) {
-      reshuffleDeck(newState);
-      newState.players[opponent].push(newState.deck.pop());
+      newState.players[opponent].push(safeDraw(newState));
       newState.turn = user.$id;
       setMessage("🟢 General Market!");
     }
@@ -148,15 +159,28 @@ export default function Game() {
   // 🃏 DRAW CARD
   // =========================
   async function drawCard() {
+    if (game.finished) {
+      return setMessage("Game already finished");
+    }
+
     if (state.turn !== user.$id) {
       return setMessage("⛔ Not your turn");
     }
 
+    // 🔒 SYNC CHECK
+    const fresh = await databases.getDocument(
+      DB_ID,
+      GAMES_COLLECTION_ID,
+      id
+    );
+
+    if (fresh.lastMove !== game.lastMove) {
+      return setMessage("⚠️ Game updated, retry");
+    }
+
     const newState = JSON.parse(JSON.stringify(state));
 
-    reshuffleDeck(newState);
-
-    const drawn = newState.deck.pop();
+    const drawn = safeDraw(newState);
 
     if (!drawn) {
       return setMessage("No cards left");
@@ -240,7 +264,6 @@ export default function Game() {
 
       <hr />
 
-      {/* TOP CARD */}
       <div>
         <h3>Top Card</h3>
         {topCard && (
@@ -250,7 +273,6 @@ export default function Game() {
         )}
       </div>
 
-      {/* DRAW BUTTON */}
       <button
         onClick={drawCard}
         disabled={state.turn !== user.$id}
@@ -259,8 +281,7 @@ export default function Game() {
           padding: 10,
           background: "gold",
           border: "none",
-          borderRadius: 6,
-          cursor: "pointer"
+          borderRadius: 6
         }}
       >
         🃏 Draw Card
@@ -274,7 +295,6 @@ export default function Game() {
 
       <hr />
 
-      {/* PLAYER HAND */}
       <div>
         <h3>Your Cards</h3>
 
