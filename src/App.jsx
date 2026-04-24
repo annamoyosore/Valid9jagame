@@ -11,7 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <Routes>
-      {/* 🌐 Landing handles login now */}
+      {/* 🌐 Landing handles login */}
       <Route path="/" element={<Landing />} />
 
       {/* 🔐 PROTECTED ROUTES */}
@@ -51,7 +51,7 @@ export default function App() {
         }
       />
 
-      {/* ✅ fallback */}
+      {/* fallback */}
       <Route path="*" element={<Landing />} />
     </Routes>
   );
