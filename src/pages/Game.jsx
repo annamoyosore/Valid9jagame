@@ -7,6 +7,7 @@ import {
   GAMES_COLLECTION_ID
 } from "../lib/appwrite";
 import { useAuth } from "../context/AuthContext";
+import { getWallet, rewardWinner } from "../utils/wallet";
 
 export default function Game() {
   // =========================
@@ -21,16 +22,14 @@ export default function Game() {
   const [game, setGame] = useState(null);
 
   // =========================
-  // 🔹 LOAD GAME + REALTIME SYNC
+  // 🔹 LOAD + REALTIME
   // =========================
   useEffect(() => {
     loadGame();
 
     const unsubscribe = realtime.subscribe(
       `databases.${DB_ID}.collections.${GAMES_COLLECTION_ID}.documents.${id}`,
-      (res) => {
-        setGame(res.payload);
-      }
+      (res) => setGame(res.payload)
     );
 
     return () => unsubscribe();
@@ -41,38 +40,66 @@ export default function Game() {
     setGame(g);
   }
 
-  // =========================
-  // 🔹 LOADING STATE
-  // =========================
   if (!game) return <p>Loading game...</p>;
 
-  // =========================
-  // 🔹 PARSE GAME STATE
-  // =========================
   const state = JSON.parse(game.state || "{}");
-
   const myHand = state.players?.[user.$id] || [];
 
+  const opponent = game.players.find(p => p !== user.$id);
+
   // =========================
-  // 🎮 PLAY CARD (CORE LOGIC)
+  // 🎮 PLAY CARD + WHOT RULES
   // =========================
   async function playCard(index) {
     if (state.turn !== user.$id) return alert("Not your turn");
 
     const newState = JSON.parse(JSON.stringify(state));
-
     const card = newState.players[user.$id][index];
 
     // remove card
     newState.players[user.$id].splice(index, 1);
-
-    // add to discard
     newState.discard.push(card);
 
-    // 🔁 SWITCH TURN
-    const opponent = game.players.find(p => p !== user.$id);
-    newState.turn = opponent;
+    // =========================
+    // 🧠 WHOT RULES
+    // =========================
 
+    // 🔴 2 → PICK 2
+    if (card.number === 2) {
+      newState.players[opponent].push(newState.deck.pop());
+      newState.players[opponent].push(newState.deck.pop());
+      newState.turn = user.$id; // you play again
+    }
+
+    // 🔵 8 → SUSPEND
+    else if (card.number === 8) {
+      newState.turn = user.$id; // skip opponent
+    }
+
+    // 🟢 14 → GENERAL MARKET (Pick 1 + Skip)
+    else if (card.number === 14) {
+      newState.players[opponent].push(newState.deck.pop());
+      newState.turn = user.$id;
+    }
+
+    // 🟡 1 → HOLD ON (Play Again)
+    else if (card.number === 1) {
+      newState.turn = user.$id;
+    }
+
+    // ⚪ NORMAL CARD
+    else {
+      newState.turn = opponent;
+    }
+
+    // =========================
+    // 🏆 CHECK WINNER
+    // =========================
+    await checkWinner(newState);
+
+    // =========================
+    // 💾 SAVE STATE
+    // =========================
     await databases.updateDocument(
       DB_ID,
       GAMES_COLLECTION_ID,
@@ -85,45 +112,48 @@ export default function Game() {
   }
 
   // =========================
-  // 🎯 FUTURE: VALIDATION LOGIC
+  // 🏆 WINNER DETECTION
   // =========================
-  // TODO:
-  // - Check valid move
-  // - Apply WHOT rules (2, 8, 14)
-  // - Handle draw logic
+  async function checkWinner(newState) {
+    const me = user.$id;
+
+    if (newState.players[me].length === 0) {
+      await finishGame(me);
+    }
+
+    if (newState.players[opponent].length === 0) {
+      await finishGame(opponent);
+    }
+  }
 
   // =========================
-  // 🏆 FUTURE: WIN DETECTION
+  // 💰 FINAL PAYOUT
   // =========================
-  // TODO:
-  // - Detect empty hand
-  // - Trigger winner
-  // - Move to next round
+  async function finishGame(winnerId) {
+    const pot = game.pot || 0;
+
+    const fee = Math.floor(pot * 0.1);
+    const reward = pot - fee;
+
+    const wallet = await getWallet(winnerId);
+    await rewardWinner(wallet, reward);
+
+    await databases.updateDocument(
+      DB_ID,
+      GAMES_COLLECTION_ID,
+      id,
+      {
+        finished: true,
+        winner: winnerId
+      }
+    );
+  }
 
   // =========================
-  // 🔁 FUTURE: ROUND SYSTEM
-  // =========================
-  // TODO:
-  // - Track rounds (1 → 3)
-  // - Reset state between rounds
-
-  // =========================
-  // 💰 FUTURE: PAYOUT SYSTEM
-  // =========================
-  // TODO:
-  // - Deduct 10% fee
-  // - Reward winner
-  // - Handle penalties
-
-  // =========================
-  // 🎨 UI RENDER
+  // 🎨 UI
   // =========================
   return (
     <div style={{ padding: 20 }}>
-      
-      {/* =========================
-          🔹 HEADER
-      ========================= */}
       <h2>🎮 Multiplayer WHOT</h2>
 
       <p>
@@ -133,24 +163,19 @@ export default function Game() {
 
       <hr />
 
-      {/* =========================
-          🃏 TOP CARD SECTION
-      ========================= */}
+      {/* 🃏 TOP CARD */}
       <div>
         <h3>Top Card</h3>
         {state.discard?.length > 0 && (
           <p>
-            {state.discard[state.discard.length - 1].shape} -{" "}
-            {state.discard[state.discard.length - 1].number}
+            {state.discard.at(-1).shape} - {state.discard.at(-1).number}
           </p>
         )}
       </div>
 
       <hr />
 
-      {/* =========================
-          🖐️ PLAYER HAND SECTION
-      ========================= */}
+      {/* 🖐️ YOUR HAND */}
       <div>
         <h3>Your Cards</h3>
 
@@ -178,24 +203,6 @@ export default function Game() {
           ))}
         </div>
       </div>
-
-      {/* =========================
-          🤖 FUTURE: OPPONENT VIEW
-      ========================= */}
-      {/* TODO:
-          - Show opponent card count
-          - Hide opponent cards
-      */}
-
-      {/* =========================
-          📊 FUTURE: GAME INFO PANEL
-      ========================= */}
-      {/* TODO:
-          - Show stake
-          - Show pot
-          - Show round number
-      */}
-
     </div>
   );
 }
