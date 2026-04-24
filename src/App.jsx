@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 
-import Landing from "./pages/Landing";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Wallet from "./pages/Wallet";
 import GameRoom from "./pages/GameRoom";
@@ -11,10 +11,13 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <Routes>
-      {/* 🌐 Landing handles login */}
-      <Route path="/" element={<Landing />} />
+      {/* 🔥 DEFAULT PAGE */}
+      <Route path="/" element={<Login />} />
 
-      {/* 🔐 PROTECTED ROUTES */}
+      {/* (optional) keep /login too */}
+      <Route path="/login" element={<Login />} />
+
+      {/* 🔐 PROTECTED */}
       <Route
         path="/dashboard"
         element={
@@ -50,9 +53,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
-      {/* fallback */}
-      <Route path="*" element={<Landing />} />
     </Routes>
   );
 }
