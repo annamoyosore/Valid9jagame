@@ -154,55 +154,61 @@ export default function Game() {
   // =========================
   return (
     <div style={{ padding: 20 }}>
-      <h2>🎮 Multiplayer WHOT</h2>
+   <h2>🎮 Multiplayer WHOT</h2>
 
-      <p>
-        Turn:{" "}
-        {state.turn === user.$id ? "🟢 YOUR TURN" : "🔴 OPPONENT"}
-      </p>
+<p>
+  Turn:{" "}
+  {state.turn === user.$id ? "🟢 YOUR TURN" : "🔴 OPPONENT"}
+</p>
 
-      <hr />
+{/* =========================
+    📊 GAME INFO (NEW)
+========================= */}
+<div style={{ marginBottom: 10 }}>
+  <strong>Round:</strong> {game.round || 1} / 3  
+  &nbsp; | &nbsp;  
+  <strong>Pot:</strong> {game.pot || 0} 🪙
+</div>
 
-      {/* 🃏 TOP CARD */}
-      <div>
-        <h3>Top Card</h3>
-        {state.discard?.length > 0 && (
-          <p>
-            {state.discard.at(-1).shape} - {state.discard.at(-1).number}
-          </p>
-        )}
-      </div>
+<hr />
 
-      <hr />
+{/* 🃏 TOP CARD */}
+<div>
+  <h3>Top Card</h3>
+  {state.discard?.length > 0 && (
+    <p>
+      {state.discard.at(-1).shape} - {state.discard.at(-1).number}
+    </p>
+  )}
+</div>
 
-      {/* 🖐️ YOUR HAND */}
-      <div>
-        <h3>Your Cards</h3>
+<hr />
 
-        {myHand.length === 0 && <p>No cards</p>}
+{/* 🖐️ YOUR HAND */}
+<div>
+  <h3>Your Cards</h3>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {myHand.map((c, i) => (
-            <button
-              key={i}
-              onClick={() => playCard(i)}
-              style={{
-                padding: 10,
-                borderRadius: 6,
-                border: "1px solid #ccc",
-                background:
-                  state.turn === user.$id ? "#fff" : "#999",
-                cursor:
-                  state.turn === user.$id
-                    ? "pointer"
-                    : "not-allowed"
-              }}
-            >
-              {c.shape} {c.number}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+  {myHand.length === 0 && <p>No cards</p>}
+
+  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+    {myHand.map((c, i) => (
+      <button
+        key={i}
+        onClick={() => playCard(i)}
+        style={{
+          padding: 10,
+          borderRadius: 6,
+          border: "1px solid #ccc",
+          background:
+            state.turn === user.$id ? "#fff" : "#999",
+          cursor:
+            state.turn === user.$id
+              ? "pointer"
+              : "not-allowed"
+        }}
+      >
+        {c.shape} {c.number}
+      </button>
+    ))}
+  </div>
+</div>
