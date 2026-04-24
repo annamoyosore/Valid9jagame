@@ -6,7 +6,7 @@ import {
   DB_ID,
   GAMES_COLLECTION_ID
 } from "../lib/appwrite";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext.jsx";
 import { getWallet, rewardWinner } from "../utils/wallet";
 
 const SHAPES = ["circle", "triangle", "square", "star", "cross"];
