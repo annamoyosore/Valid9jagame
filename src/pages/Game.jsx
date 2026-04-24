@@ -10,19 +10,14 @@ import { useAuth } from "../context/AuthContext";
 import { getWallet, rewardWinner } from "../utils/wallet";
 
 export default function Game() {
-  // =========================
-  // 🔹 ROUTER + AUTH
-  // =========================
   const { id } = useParams();
   const { user } = useAuth();
 
-  // =========================
-  // 🔹 STATE
-  // =========================
   const [game, setGame] = useState(null);
+  const [message, setMessage] = useState("");
 
   // =========================
-  // 🔹 LOAD + REALTIME
+  // 🔄 LOAD + REALTIME
   // =========================
   useEffect(() => {
     loadGame();
@@ -44,62 +39,100 @@ export default function Game() {
 
   const state = JSON.parse(game.state || "{}");
   const myHand = state.players?.[user.$id] || [];
-
   const opponent = game.players.find(p => p !== user.$id);
+  const topCard = state.discard?.at(-1);
 
   // =========================
-  // 🎮 PLAY CARD + WHOT RULES
+  // ♻️ DECK RESHUFFLE
+  // =========================
+  function reshuffleDeck(newState) {
+    if (newState.deck.length === 0) {
+      const discard = [...newState.discard];
+      const top = discard.pop();
+
+      newState.deck = discard.sort(() => Math.random() - 0.5);
+      newState.discard = [top];
+    }
+  }
+
+  // =========================
+  // 🎯 VALIDATION
+  // =========================
+  function isValidMove(card, topCard) {
+    if (!topCard) return { valid: true };
+
+    if (card.number === topCard.number) return { valid: true };
+    if (card.shape === topCard.shape) return { valid: true };
+
+    return {
+      valid: false,
+      reason: "Match number or shape"
+    };
+  }
+
+  function hasValidMove(hand, topCard) {
+    return hand.some(
+      c => c.number === topCard?.number || c.shape === topCard?.shape
+    );
+  }
+
+  // =========================
+  // 🎮 PLAY CARD
   // =========================
   async function playCard(index) {
-    if (state.turn !== user.$id) return alert("Not your turn");
+    if (state.turn !== user.$id) {
+      return setMessage("⛔ Not your turn");
+    }
 
     const newState = JSON.parse(JSON.stringify(state));
     const card = newState.players[user.$id][index];
 
-    // remove card
+    const check = isValidMove(card, topCard);
+
+    if (!check.valid) {
+      return setMessage(`❌ ${check.reason}`);
+    }
+
     newState.players[user.$id].splice(index, 1);
     newState.discard.push(card);
+
+    reshuffleDeck(newState);
 
     // =========================
     // 🧠 WHOT RULES
     // =========================
-
-    // 🔴 2 → PICK 2
     if (card.number === 2) {
+      reshuffleDeck(newState);
       newState.players[opponent].push(newState.deck.pop());
-      newState.players[opponent].push(newState.deck.pop());
-      newState.turn = user.$id; // you play again
-    }
-
-    // 🔵 8 → SUSPEND
-    else if (card.number === 8) {
-      newState.turn = user.$id; // skip opponent
-    }
-
-    // 🟢 14 → GENERAL MARKET (Pick 1 + Skip)
-    else if (card.number === 14) {
       newState.players[opponent].push(newState.deck.pop());
       newState.turn = user.$id;
+      setMessage("🔴 Pick 2!");
     }
 
-    // 🟡 1 → HOLD ON (Play Again)
+    else if (card.number === 8) {
+      newState.turn = user.$id;
+      setMessage("🔵 Suspend!");
+    }
+
+    else if (card.number === 14) {
+      reshuffleDeck(newState);
+      newState.players[opponent].push(newState.deck.pop());
+      newState.turn = user.$id;
+      setMessage("🟢 General Market!");
+    }
+
     else if (card.number === 1) {
       newState.turn = user.$id;
+      setMessage("🟡 Play again!");
     }
 
-    // ⚪ NORMAL CARD
     else {
       newState.turn = opponent;
+      setMessage("");
     }
 
-    // =========================
-    // 🏆 CHECK WINNER
-    // =========================
     await checkWinner(newState);
 
-    // =========================
-    // 💾 SAVE STATE
-    // =========================
     await databases.updateDocument(
       DB_ID,
       GAMES_COLLECTION_ID,
@@ -112,13 +145,45 @@ export default function Game() {
   }
 
   // =========================
-  // 🏆 WINNER DETECTION
+  // 🃏 DRAW CARD
+  // =========================
+  async function drawCard() {
+    if (state.turn !== user.$id) {
+      return setMessage("⛔ Not your turn");
+    }
+
+    const newState = JSON.parse(JSON.stringify(state));
+
+    reshuffleDeck(newState);
+
+    const drawn = newState.deck.pop();
+
+    if (!drawn) {
+      return setMessage("No cards left");
+    }
+
+    newState.players[user.$id].push(drawn);
+    newState.turn = opponent;
+
+    setMessage("🃏 You drew a card");
+
+    await databases.updateDocument(
+      DB_ID,
+      GAMES_COLLECTION_ID,
+      id,
+      {
+        state: JSON.stringify(newState),
+        lastMove: Date.now().toString()
+      }
+    );
+  }
+
+  // =========================
+  // 🏆 WIN CHECK
   // =========================
   async function checkWinner(newState) {
-    const me = user.$id;
-
-    if (newState.players[me].length === 0) {
-      await finishGame(me);
+    if (newState.players[user.$id].length === 0) {
+      await finishGame(user.$id);
     }
 
     if (newState.players[opponent].length === 0) {
@@ -127,7 +192,7 @@ export default function Game() {
   }
 
   // =========================
-  // 💰 FINAL PAYOUT
+  // 💰 PAYOUT
   // =========================
   async function finishGame(winnerId) {
     const pot = game.pot || 0;
@@ -153,62 +218,87 @@ export default function Game() {
   // 🎨 UI
   // =========================
   return (
-    <div style={{ padding: 20 }}>
-   <h2>🎮 Multiplayer WHOT</h2>
+    <div style={{ padding: 20, maxWidth: 500, margin: "auto" }}>
+      <h2>🎮 Multiplayer WHOT</h2>
 
-<p>
-  Turn:{" "}
-  {state.turn === user.$id ? "🟢 YOUR TURN" : "🔴 OPPONENT"}
-</p>
+      <p>
+        {state.turn === user.$id
+          ? "🟢 Your Turn"
+          : "🔴 Opponent Turn"}
+      </p>
 
-{/* =========================
-    📊 GAME INFO (NEW)
-========================= */}
-<div style={{ marginBottom: 10 }}>
-  <strong>Round:</strong> {game.round || 1} / 3  
-  &nbsp; | &nbsp;  
-  <strong>Pot:</strong> {game.pot || 0} 🪙
-</div>
+      <div style={{ marginBottom: 10 }}>
+        <strong>Round:</strong> {game.round || 1} / 3 |{" "}
+        <strong>Pot:</strong> {game.pot || 0} 🪙
+      </div>
 
-<hr />
+      {message && (
+        <div style={{ color: "yellow", marginBottom: 10 }}>
+          {message}
+        </div>
+      )}
 
-{/* 🃏 TOP CARD */}
-<div>
-  <h3>Top Card</h3>
-  {state.discard?.length > 0 && (
-    <p>
-      {state.discard.at(-1).shape} - {state.discard.at(-1).number}
-    </p>
-  )}
-</div>
+      <hr />
 
-<hr />
+      {/* TOP CARD */}
+      <div>
+        <h3>Top Card</h3>
+        {topCard && (
+          <p>
+            {topCard.shape} - {topCard.number}
+          </p>
+        )}
+      </div>
 
-{/* 🖐️ YOUR HAND */}
-<div>
-  <h3>Your Cards</h3>
-
-  {myHand.length === 0 && <p>No cards</p>}
-
-  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-    {myHand.map((c, i) => (
+      {/* DRAW BUTTON */}
       <button
-        key={i}
-        onClick={() => playCard(i)}
+        onClick={drawCard}
+        disabled={state.turn !== user.$id}
         style={{
+          marginTop: 10,
           padding: 10,
+          background: "gold",
+          border: "none",
           borderRadius: 6,
-          border: "1px solid #ccc",
-          background:
-            state.turn === user.$id ? "#fff" : "#999",
-          cursor:
-            state.turn === user.$id
-              ? "pointer"
-              : "not-allowed"
+          cursor: "pointer"
         }}
       >
-        {c.shape} {c.number}
+        🃏 Draw Card
       </button>
-    ))}
-  </div>
-</div>
+
+      {!hasValidMove(myHand, topCard) && (
+        <p style={{ color: "orange" }}>
+          ⚠️ No valid move — draw a card
+        </p>
+      )}
+
+      <hr />
+
+      {/* PLAYER HAND */}
+      <div>
+        <h3>Your Cards</h3>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {myHand.map((c, i) => (
+            <button
+              key={i}
+              onClick={() => playCard(i)}
+              disabled={state.turn !== user.$id}
+              style={{
+                padding: 10,
+                borderRadius: 6,
+                border: "1px solid #ccc",
+                background:
+                  state.turn === user.$id ? "#fff" : "#555",
+                color:
+                  state.turn === user.$id ? "#000" : "#ccc"
+              }}
+            >
+              {c.shape} {c.number}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
