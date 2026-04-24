@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function Landing() {
+  const navigate = useNavigate();
+
   return (
     <div
       style={{
@@ -25,33 +27,38 @@ export default function Landing() {
 
       <div style={{ marginTop: 30, display: "flex", gap: 10 }}>
         
-        {/* ✅ SIMPLE + RELIABLE */}
-        <Link
-          to="/login"
+        {/* ✅ FORCE NAVIGATION */}
+        <button
+          onClick={() => {
+            console.log("Start clicked");
+            navigate("/login");
+          }}
           style={{
             padding: "12px 24px",
             background: "#22c55e",
             color: "#000",
             borderRadius: 8,
-            textDecoration: "none",
-            fontWeight: "bold"
+            border: "none",
+            fontWeight: "bold",
+            cursor: "pointer"
           }}
         >
           Start Playing
-        </Link>
+        </button>
 
-        <Link
-          to="/dashboard"
+        <button
+          onClick={() => navigate("/dashboard")}
           style={{
             padding: "12px 24px",
             border: "1px solid #fff",
             borderRadius: 8,
-            textDecoration: "none",
-            color: "#fff"
+            background: "transparent",
+            color: "#fff",
+            cursor: "pointer"
           }}
         >
           Dashboard
-        </Link>
+        </button>
       </div>
     </div>
   );
