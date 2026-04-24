@@ -1,58 +1,88 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { account } from "../lib/appwrite";
-import { getWallet, createWallet } from "../utils/wallet";
+import { useNavigate } from "react-router-dom";
 
-const AuthContext = createContext();
+export default function Landing() {
+  const navigate = useNavigate();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  function goToLogin() {
+    console.log("Start Playing clicked");
 
-  async function getUser() {
     try {
-      const res = await account.get();
-      setUser(res);
+      // ✅ Primary navigation (SPA)
+      navigate("/login", { replace: true });
 
-      // ✅ DO NOT BLOCK AUTH WITH WALLET
-      handleWallet(res);
+      // 🔁 Fallback (in case React Router fails silently)
+      setTimeout(() => {
+        if (window.location.pathname !== "/login") {
+          console.log("Fallback triggered");
+          window.location.href = "/login";
+        }
+      }, 300);
 
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false); // ✅ ALWAYS runs
-    }
-  }
-
-  // 🔁 run wallet logic separately
-  async function handleWallet(user) {
-    try {
-      let wallet = await getWallet(user.$id);
-
-      if (!wallet) {
-        await createWallet(user);
-        console.log("✅ Wallet created");
-      }
     } catch (err) {
-      console.log("Wallet check failed", err);
+      console.error("Navigation failed:", err);
+      window.location.href = "/login"; // 🔥 hard fallback
     }
   }
 
-  useEffect(() => {
-    getUser();
-  }, []);
-
-  async function logout() {
-    await account.deleteSession("current");
-    setUser(null);
+  function goToDashboard() {
+    navigate("/dashboard", { replace: true });
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, getUser, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "linear-gradient(135deg, #0f172a, #1e293b)",
+        color: "#fff",
+        textAlign: "center",
+        padding: 20
+      }}
+    >
+      <h1 style={{ fontSize: "3rem", marginBottom: 10 }}>
+        🎮 WHOT Multiplayer Game
+      </h1>
 
-export function useAuth() {
-  return useContext(AuthContext);
+      <p style={{ fontSize: "1.2rem", opacity: 0.8 }}>
+        Play • Compete • Win Coins 🪙
+      </p>
+
+      <div style={{ marginTop: 30, display: "flex", gap: 10 }}>
+        
+        {/* ✅ FIXED BUTTON */}
+        <button
+          onClick={goToLogin}
+          style={{
+            padding: "12px 24px",
+            background: "#22c55e",
+            color: "#000",
+            borderRadius: 8,
+            border: "none",
+            fontWeight: "bold",
+            cursor: "pointer"
+          }}
+        >
+          Start Playing
+        </button>
+
+        {/* Dashboard */}
+        <button
+          onClick={goToDashboard}
+          style={{
+            padding: "12px 24px",
+            border: "1px solid #fff",
+            borderRadius: 8,
+            background: "transparent",
+            color: "#fff",
+            cursor: "pointer"
+          }}
+        >
+          Dashboard
+        </button>
+      </div>
+    </div>
+  );
 }
