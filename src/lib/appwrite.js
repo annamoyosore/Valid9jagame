@@ -1,4 +1,4 @@
-import { Client, Account, Databases, ID, Realtime } from "appwrite";
+import { Client, Account, Databases, ID } from "appwrite";
 
 const client = new Client();
 
@@ -12,8 +12,8 @@ export const account = new Account(client);
 // 🗄️ Database
 export const databases = new Databases(client);
 
-// ⚡ REALTIME (FIXED)
-export const realtime = new Realtime(client);
+// ⚡ REALTIME (CORRECT FOR YOUR SDK)
+export const realtime = client;
 
 // 🆔 ID generator
 export { ID };
