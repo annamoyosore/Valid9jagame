@@ -13,19 +13,28 @@ export function AuthProvider({ children }) {
       const res = await account.get();
       setUser(res);
 
-      // 🔁 AUTO CREATE WALLET HERE
-      let wallet = await getWallet(res.$id);
-
-      if (!wallet) {
-        await createWallet(res);
-        console.log("✅ Wallet created");
-      }
+      // ✅ DO NOT BLOCK AUTH WITH WALLET
+      handleWallet(res);
 
     } catch {
       setUser(null);
+    } finally {
+      setLoading(false); // ✅ ALWAYS runs
     }
+  }
 
-    setLoading(false);
+  // 🔁 run wallet logic separately
+  async function handleWallet(user) {
+    try {
+      let wallet = await getWallet(user.$id);
+
+      if (!wallet) {
+        await createWallet(user);
+        console.log("✅ Wallet created");
+      }
+    } catch (err) {
+      console.log("Wallet check failed", err);
+    }
   }
 
   useEffect(() => {
