@@ -27,7 +27,7 @@ export default function Landing() {
         
         {/* ✅ USE LINK INSTEAD OF <a> */}
         <Link
-          to="/login"
+          to="/Login"
           style={{
             padding: "12px 24px",
             background: "#22c55e",
