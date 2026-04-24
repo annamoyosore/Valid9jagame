@@ -9,12 +9,20 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function Game() {
+  // =========================
+  // 🔹 ROUTER + AUTH
+  // =========================
   const { id } = useParams();
   const { user } = useAuth();
 
+  // =========================
+  // 🔹 STATE
+  // =========================
   const [game, setGame] = useState(null);
 
-  // 🔄 LOAD + REALTIME SYNC
+  // =========================
+  // 🔹 LOAD GAME + REALTIME SYNC
+  // =========================
   useEffect(() => {
     loadGame();
 
@@ -33,13 +41,21 @@ export default function Game() {
     setGame(g);
   }
 
+  // =========================
+  // 🔹 LOADING STATE
+  // =========================
   if (!game) return <p>Loading game...</p>;
 
+  // =========================
+  // 🔹 PARSE GAME STATE
+  // =========================
   const state = JSON.parse(game.state || "{}");
 
   const myHand = state.players?.[user.$id] || [];
 
-  // 🎮 PLAY CARD (STEP 6 CORE LOGIC)
+  // =========================
+  // 🎮 PLAY CARD (CORE LOGIC)
+  // =========================
   async function playCard(index) {
     if (state.turn !== user.$id) return alert("Not your turn");
 
@@ -53,7 +69,7 @@ export default function Game() {
     // add to discard
     newState.discard.push(card);
 
-    // switch turn
+    // 🔁 SWITCH TURN
     const opponent = game.players.find(p => p !== user.$id);
     newState.turn = opponent;
 
@@ -68,8 +84,46 @@ export default function Game() {
     );
   }
 
+  // =========================
+  // 🎯 FUTURE: VALIDATION LOGIC
+  // =========================
+  // TODO:
+  // - Check valid move
+  // - Apply WHOT rules (2, 8, 14)
+  // - Handle draw logic
+
+  // =========================
+  // 🏆 FUTURE: WIN DETECTION
+  // =========================
+  // TODO:
+  // - Detect empty hand
+  // - Trigger winner
+  // - Move to next round
+
+  // =========================
+  // 🔁 FUTURE: ROUND SYSTEM
+  // =========================
+  // TODO:
+  // - Track rounds (1 → 3)
+  // - Reset state between rounds
+
+  // =========================
+  // 💰 FUTURE: PAYOUT SYSTEM
+  // =========================
+  // TODO:
+  // - Deduct 10% fee
+  // - Reward winner
+  // - Handle penalties
+
+  // =========================
+  // 🎨 UI RENDER
+  // =========================
   return (
     <div style={{ padding: 20 }}>
+      
+      {/* =========================
+          🔹 HEADER
+      ========================= */}
       <h2>🎮 Multiplayer WHOT</h2>
 
       <p>
@@ -79,7 +133,9 @@ export default function Game() {
 
       <hr />
 
-      {/* 🃏 TOP CARD */}
+      {/* =========================
+          🃏 TOP CARD SECTION
+      ========================= */}
       <div>
         <h3>Top Card</h3>
         {state.discard?.length > 0 && (
@@ -92,7 +148,9 @@ export default function Game() {
 
       <hr />
 
-      {/* 🖐️ PLAYER HAND */}
+      {/* =========================
+          🖐️ PLAYER HAND SECTION
+      ========================= */}
       <div>
         <h3>Your Cards</h3>
 
@@ -120,6 +178,24 @@ export default function Game() {
           ))}
         </div>
       </div>
+
+      {/* =========================
+          🤖 FUTURE: OPPONENT VIEW
+      ========================= */}
+      {/* TODO:
+          - Show opponent card count
+          - Hide opponent cards
+      */}
+
+      {/* =========================
+          📊 FUTURE: GAME INFO PANEL
+      ========================= */}
+      {/* TODO:
+          - Show stake
+          - Show pot
+          - Show round number
+      */}
+
     </div>
   );
 }
