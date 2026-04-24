@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 
 import Landing from "./pages/Landing";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Wallet from "./pages/Wallet";
 import GameRoom from "./pages/GameRoom";
@@ -12,9 +11,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <Routes>
-      {/* 🌐 PUBLIC ROUTES */}
+      {/* 🌐 Landing handles login now */}
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
 
       {/* 🔐 PROTECTED ROUTES */}
       <Route
@@ -53,7 +51,7 @@ export default function App() {
         }
       />
 
-      {/* ❗ FALLBACK (VERY IMPORTANT FOR VERCEL) */}
+      {/* ✅ fallback */}
       <Route path="*" element={<Landing />} />
     </Routes>
   );
